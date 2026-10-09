@@ -1,447 +1,219 @@
 /**
- * RUDRA DADHALWALA PORTFOLIO - MAIN CLIENT SCRIPT
- * Handles interactivity, animations, terminal emulator, theme accents, and dynamic filtering.
+ * RUDRA DADHALWALA PORTFOLIO — CLIENT ENGINE
+ * Handles Lucide icons, theme toggle, terminal typing, cursor glow, and modal dialogs.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  initCurrentYear();
+  initLucideIcons();
+  initThemeToggle();
   initCursorGlow();
-  initNavbarScrollAndSpy();
+  initTerminalTyping();
+  initModals();
   initMobileMenu();
-  initAccentPalette();
-  initTypewriterEffect();
-  initTerminalTabs();
-  initTerminalClock();
-  initProjectFiltering();
-  initSkillTabs();
-  initCopyEmail();
-  initContactForm();
-  initBackToTop();
 });
 
 /* ----------------------------------------------------
-   1. DYNAMIC FOOTER YEAR
+   1. LUCIDE ICONS INITIALIZATION
 ---------------------------------------------------- */
-function initCurrentYear() {
-  const yearEl = document.getElementById('currentYear');
-  if (yearEl) {
-    yearEl.textContent = new Date().getFullYear();
+function initLucideIcons() {
+  if (window.lucide) {
+    window.lucide.createIcons();
   }
 }
 
 /* ----------------------------------------------------
-   2. AMBIENT CURSOR GLOW
+   2. PURE WHITE / PITCH DARK THEME TOGGLE (Trope 3)
+---------------------------------------------------- */
+function initThemeToggle() {
+  const toggleBtn = document.getElementById('themeToggleBtn');
+  const label = document.getElementById('themeToggleLabel');
+  if (!toggleBtn) return;
+
+  const savedTheme = localStorage.getItem('rudra_theme') || 'dark';
+  applyTheme(savedTheme);
+
+  toggleBtn.addEventListener('click', () => {
+    const currentTheme = document.body.getAttribute('data-theme') || 'dark';
+    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme);
+  });
+
+  function applyTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('rudra_theme', theme);
+
+    if (label) {
+      label.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+    }
+
+    // Refresh icons if needed
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  }
+}
+
+/* ----------------------------------------------------
+   3. CURSOR GLOW AURA TRACKER
 ---------------------------------------------------- */
 function initCursorGlow() {
-  const cursorGlow = document.getElementById('cursorGlow');
-  if (!cursorGlow) return;
+  const glow = document.getElementById('cursorGlow');
+  if (!glow) return;
 
-  // Only activate on devices with fine pointer
   if (window.matchMedia('(pointer: fine)').matches) {
     let mouseX = window.innerWidth / 2;
     let mouseY = window.innerHeight / 2;
-    let currentX = mouseX;
-    let currentY = mouseY;
+    let currX = mouseX;
+    let currY = mouseY;
 
     window.addEventListener('mousemove', (e) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
     });
 
-    function renderGlow() {
-      // Smooth lerp interpolation
-      currentX += (mouseX - currentX) * 0.15;
-      currentY += (mouseY - currentY) * 0.15;
-      cursorGlow.style.left = `${currentX}px`;
-      cursorGlow.style.top = `${currentY}px`;
-      requestAnimationFrame(renderGlow);
+    function loop() {
+      currX += (mouseX - currX) * 0.15;
+      currY += (mouseY - currY) * 0.15;
+      glow.style.left = `${currX}px`;
+      glow.style.top = `${currY}px`;
+      requestAnimationFrame(loop);
     }
-    requestAnimationFrame(renderGlow);
+    requestAnimationFrame(loop);
   } else {
-    cursorGlow.style.display = 'none';
+    glow.style.display = 'none';
   }
 }
 
 /* ----------------------------------------------------
-   3. NAVBAR SCROLL & ACTIVE SECTION SPY
+   4. TERMINAL LIVE TYPING ANIMATION
 ---------------------------------------------------- */
-function initNavbarScrollAndSpy() {
-  const navbar = document.getElementById('navbar');
-  const navLinks = document.querySelectorAll('.nav-links .nav-link');
-  const sections = document.querySelectorAll('main section[id]');
+function initTerminalTyping() {
+  const typingEl = document.getElementById('termLiveTyping');
+  if (!typingEl) return;
 
-  window.addEventListener('scroll', () => {
-    // Add backdrop style when scrolled past 50px
-    if (window.scrollY > 50) {
-      navbar.classList.add('scrolled');
+  const commands = [
+    'curl -X POST https://api.rudra.dev/v1/hire',
+    'cargo build --release --bin sendbridge',
+    'agentmaxxing --orchestrate --autonomous-mode',
+    'git commit -m "ship: zero-downtime architecture"'
+  ];
+
+  let cmdIndex = 0;
+  let charIndex = 0;
+  let isDeleting = false;
+  let speed = 70;
+
+  function type() {
+    const currentCmd = commands[cmdIndex];
+
+    if (isDeleting) {
+      typingEl.textContent = currentCmd.substring(0, charIndex - 1);
+      charIndex--;
+      speed = 35;
     } else {
-      navbar.classList.remove('scrolled');
+      typingEl.textContent = currentCmd.substring(0, charIndex + 1);
+      charIndex++;
+      speed = 70;
     }
 
-    // Active Section Spy
-    let currentSectionId = '';
-    const scrollPosition = window.scrollY + 180;
+    if (!isDeleting && charIndex === currentCmd.length) {
+      speed = 2000;
+      isDeleting = true;
+    } else if (isDeleting && charIndex === 0) {
+      isDeleting = false;
+      cmdIndex = (cmdIndex + 1) % commands.length;
+      speed = 400;
+    }
 
-    sections.forEach((section) => {
-      const top = section.offsetTop;
-      const height = section.offsetHeight;
-      if (scrollPosition >= top && scrollPosition < top + height) {
-        currentSectionId = section.getAttribute('id');
-      }
-    });
+    setTimeout(type, speed);
+  }
 
-    navLinks.forEach((link) => {
-      link.classList.remove('active');
-      if (currentSectionId && link.getAttribute('href') === `#${currentSectionId}`) {
-        link.classList.add('active');
-      }
-    });
-  }, { passive: true });
+  type();
 }
 
 /* ----------------------------------------------------
-   4. MOBILE NAVIGATION TOGGLE
+   5. TROPE MODALS (No TOS, No Privacy, Demo Waitlist)
+---------------------------------------------------- */
+function initModals() {
+  const modal = document.getElementById('genericModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  const closeBtn = document.getElementById('modalCloseBtn');
+  const okBtn = document.getElementById('modalOkBtn');
+
+  if (!modal) return;
+
+  const openModal = (title, content) => {
+    modalTitle.innerHTML = title;
+    modalBody.innerHTML = content;
+    modal.classList.add('active');
+  };
+
+  const closeModal = () => {
+    modal.classList.remove('active');
+  };
+
+  closeBtn?.addEventListener('click', closeModal);
+  okBtn?.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Trope 18: No Real Product Demos
+  const demoBtn = document.getElementById('openDemoWaitlistBtn');
+  demoBtn?.addEventListener('click', () => {
+    openModal(
+      '⏳ Interactive Sandbox — Early Access Waitlist',
+      `You have discovered the classic tech startup rite of passage: <strong>The Interactive Demo That Is Not Quite Ready Yet</strong>.<br><br>
+      The autonomous live coding sandbox is scheduled for <strong>Q4 2026</strong>. In the meantime, you can inspect 15+ actual production repositories on GitHub or test Rudra directly in a technical interview!`
+    );
+  });
+
+  // Trope 26: No TOS (404)
+  const noTosLink = document.getElementById('noTosLink');
+  noTosLink?.addEventListener('click', () => {
+    openModal(
+      '📜 Terms of Service: Error 404',
+      `<strong>Section 1: General Usage</strong><br>
+      By viewing this portfolio, you agree to build cool software, avoid unnecessary microservices, and never deploy uncompiled code directly to main on a Friday afternoon.<br><br>
+      <strong>Section 2: Intellectual Honesty</strong><br>
+      All 30 landing page tropes on this site are presented with 100% genuine engineering foundations behind them.`
+    );
+  });
+
+  // Trope 27: No Privacy Policy (N/A)
+  const noPrivacyLink = document.getElementById('noPrivacyLink');
+  noPrivacyLink?.addEventListener('click', () => {
+    openModal(
+      '🛡️ Privacy Policy: Cryptographically Unnecessary',
+      `<strong>Zero Tracking Guarantee:</strong><br>
+      We run zero third-party tracking scripts, zero session cookies, and zero behavioral telemetry. Your browsing state is as private as a local Rust binary running in an air-gapped terminal.<br><br>
+      Stay curious, keep shipping.`
+    );
+  });
+}
+
+/* ----------------------------------------------------
+   6. MOBILE MENU
 ---------------------------------------------------- */
 function initMobileMenu() {
   const mobileBtn = document.getElementById('mobileMenuBtn');
   const navMenu = document.getElementById('navMenu');
-  const navLinks = document.querySelectorAll('.nav-links a');
-
   if (!mobileBtn || !navMenu) return;
 
-  mobileBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    mobileBtn.classList.toggle('active');
-    navMenu.classList.toggle('show');
-  });
-
-  // Close when link clicked
-  navLinks.forEach((link) => {
-    link.addEventListener('click', () => {
-      mobileBtn.classList.remove('active');
-      navMenu.classList.remove('show');
-    });
-  });
-
-  // Close when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!navMenu.contains(e.target) && !mobileBtn.contains(e.target)) {
-      mobileBtn.classList.remove('active');
-      navMenu.classList.remove('show');
+  mobileBtn.addEventListener('click', () => {
+    navMenu.style.display = navMenu.style.display === 'flex' ? 'none' : 'flex';
+    if (navMenu.style.display === 'flex') {
+      navMenu.style.flexDirection = 'column';
+      navMenu.style.position = 'absolute';
+      navMenu.style.top = '70px';
+      navMenu.style.left = '1.5rem';
+      navMenu.style.right = '1.5rem';
+      navMenu.style.background = 'var(--bg-card)';
+      navMenu.style.padding = '1.5rem';
+      navMenu.style.borderRadius = 'var(--radius-lg)';
+      navMenu.style.border = '1px solid var(--border-glass)';
+      navMenu.style.backdropFilter = 'blur(20px)';
     }
-  });
-}
-
-/* ----------------------------------------------------
-   5. ACCENT PALETTE PICKER
----------------------------------------------------- */
-function initAccentPalette() {
-  const accentBtn = document.getElementById('accentBtn');
-  const paletteMenu = document.getElementById('paletteMenu');
-  const colorDots = document.querySelectorAll('.color-dot');
-
-  if (!accentBtn || !paletteMenu) return;
-
-  // Load saved preference
-  const savedAccent = localStorage.getItem('rudra_portfolio_accent') || 'cyan';
-  setAccent(savedAccent);
-
-  accentBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    paletteMenu.classList.toggle('show');
-  });
-
-  // Close palette when clicking elsewhere
-  document.addEventListener('click', (e) => {
-    if (!paletteMenu.contains(e.target) && !accentBtn.contains(e.target)) {
-      paletteMenu.classList.remove('show');
-    }
-  });
-
-  // Handle color selection
-  colorDots.forEach((dot) => {
-    dot.addEventListener('click', () => {
-      const color = dot.dataset.color;
-      setAccent(color);
-      paletteMenu.classList.remove('show');
-    });
-  });
-
-  function setAccent(color) {
-    document.body.setAttribute('data-accent', color);
-    localStorage.setItem('rudra_portfolio_accent', color);
-
-    colorDots.forEach((dot) => {
-      dot.classList.toggle('active', dot.dataset.color === color);
-    });
-  }
-}
-
-/* ----------------------------------------------------
-   6. TYPEWRITER SUBTITLE EFFECT
----------------------------------------------------- */
-function initTypewriterEffect() {
-  const typedEl = document.getElementById('typedRole');
-  if (!typedEl) return;
-
-  const roles = [
-    'Architecting High-Performance Systems',
-    'Rust & Systems Programmer',
-    'Autonomous AI Agent Builder',
-    'Full-Stack Software Engineer',
-    'Competitive DSA Problem Solver'
-  ];
-
-  let roleIndex = 0;
-  let charIndex = 0;
-  let isDeleting = false;
-  let typingSpeed = 75;
-
-  function typeLoop() {
-    const currentRole = roles[roleIndex];
-
-    if (isDeleting) {
-      typedEl.textContent = currentRole.substring(0, charIndex - 1);
-      charIndex--;
-      typingSpeed = 35;
-    } else {
-      typedEl.textContent = currentRole.substring(0, charIndex + 1);
-      charIndex++;
-      typingSpeed = 75;
-    }
-
-    if (!isDeleting && charIndex === currentRole.length) {
-      typingSpeed = 2200; // Pause at full word
-      isDeleting = true;
-    } else if (isDeleting && charIndex === 0) {
-      isDeleting = false;
-      roleIndex = (roleIndex + 1) % roles.length;
-      typingSpeed = 400; // Pause before typing new word
-    }
-
-    setTimeout(typeLoop, typingSpeed);
-  }
-
-  typeLoop();
-}
-
-/* ----------------------------------------------------
-   7. TERMINAL TABS EMULATOR
----------------------------------------------------- */
-function initTerminalTabs() {
-  const tabs = document.querySelectorAll('.term-tab');
-  const contents = document.querySelectorAll('.term-tab-content');
-
-  tabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      const targetId = `term-${tab.dataset.tab}`;
-
-      tabs.forEach((t) => t.classList.remove('active'));
-      contents.forEach((c) => c.classList.remove('active'));
-
-      tab.classList.add('active');
-      const targetContent = document.getElementById(targetId);
-      if (targetContent) {
-        targetContent.classList.add('active');
-      }
-    });
-  });
-}
-
-/* ----------------------------------------------------
-   8. TERMINAL LIVE CLOCK
----------------------------------------------------- */
-function initTerminalClock() {
-  const clockEl = document.getElementById('termClock');
-  if (!clockEl) return;
-
-  function updateClock() {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-    clockEl.textContent = `${timeStr} UTC+5:30`;
-  }
-
-  updateClock();
-  setInterval(updateClock, 1000);
-}
-
-/* ----------------------------------------------------
-   9. PROJECT FILTERING
----------------------------------------------------- */
-function initProjectFiltering() {
-  const filterBtns = document.querySelectorAll('#projectFilters .filter-btn');
-  const projectCards = document.querySelectorAll('#projectsGrid .project-card');
-
-  filterBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      filterBtns.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      const filter = btn.dataset.filter;
-
-      projectCards.forEach((card) => {
-        const category = card.dataset.category;
-
-        if (filter === 'all' || category === filter) {
-          card.style.display = 'flex';
-          card.style.opacity = '0';
-          card.style.transform = 'scale(0.95)';
-          setTimeout(() => {
-            card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'scale(1)';
-          }, 30);
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    });
-  });
-}
-
-/* ----------------------------------------------------
-   10. SKILL MATRIX TABS
----------------------------------------------------- */
-function initSkillTabs() {
-  const skillTabs = document.querySelectorAll('#skillTabs .skill-tab-btn');
-  const categoryContents = document.querySelectorAll('.skills-category-content');
-
-  skillTabs.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const targetCat = btn.dataset.skillCat;
-      const targetContentId = `skill-cat-${targetCat}`;
-
-      skillTabs.forEach((b) => b.classList.remove('active'));
-      categoryContents.forEach((c) => c.classList.remove('active'));
-
-      btn.classList.add('active');
-      const targetContent = document.getElementById(targetContentId);
-      if (targetContent) {
-        targetContent.classList.add('active');
-      }
-    });
-  });
-}
-
-/* ----------------------------------------------------
-   11. COPY EMAIL ACTIONS & TOAST
----------------------------------------------------- */
-function initCopyEmail() {
-  const heroCopyBtn = document.getElementById('copyEmailHeroBtn');
-  const cardCopyBtn = document.getElementById('copyEmailBtn');
-
-  const copyEmail = (btn, textSpan) => {
-    const email = btn.dataset.email || 'rudradadhalwala@gmail.com';
-    navigator.clipboard.writeText(email).then(() => {
-      showToast('Email address copied to clipboard!');
-      if (textSpan) {
-        const originalText = textSpan.textContent;
-        textSpan.textContent = 'Copied!';
-        setTimeout(() => {
-          textSpan.textContent = originalText;
-        }, 2000);
-      }
-    }).catch(() => {
-      showToast('Copied: rudradadhalwala@gmail.com');
-    });
-  };
-
-  if (heroCopyBtn) {
-    const heroCopyText = document.getElementById('heroCopyText');
-    heroCopyBtn.addEventListener('click', () => copyEmail(heroCopyBtn, heroCopyText));
-  }
-
-  if (cardCopyBtn) {
-    cardCopyBtn.addEventListener('click', () => copyEmail(cardCopyBtn));
-  }
-}
-
-function showToast(message) {
-  let toast = document.querySelector('.copy-toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.className = 'copy-toast';
-    document.body.appendChild(toast);
-  }
-
-  toast.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> <span>${message}</span>`;
-  toast.classList.add('show');
-
-  setTimeout(() => {
-    toast.classList.remove('show');
-  }, 2500);
-}
-
-/* ----------------------------------------------------
-   12. CONTACT FORM HANDLER
----------------------------------------------------- */
-function initContactForm() {
-  const form = document.getElementById('contactForm');
-  const formStatus = document.getElementById('formStatus');
-
-  if (!form) return;
-
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-
-    const name = document.getElementById('senderName').value.trim();
-    const email = document.getElementById('senderEmail').value.trim();
-    const subject = document.getElementById('messageSubject').value.trim();
-    const body = document.getElementById('messageBody').value.trim();
-
-    if (!name || !email || !body) return;
-
-    // Compose mailto link
-    const mailtoSubject = encodeURIComponent(`[Portfolio Contact] ${subject || 'Opportunity / Collaboration'}`);
-    const mailtoBody = encodeURIComponent(
-      `Name: ${name}\nEmail: ${email}\n\nMessage:\n${body}`
-    );
-
-    const mailtoUrl = `mailto:rudradadhalwala@gmail.com?subject=${mailtoSubject}&body=${mailtoBody}`;
-
-    if (formStatus) {
-      formStatus.className = 'form-status success';
-      formStatus.innerHTML = `<i class="fa-solid fa-circle-check"></i> Launching email client with your message...`;
-    }
-
-    // Open user's default email client
-    window.location.href = mailtoUrl;
-
-    setTimeout(() => {
-      form.reset();
-      if (formStatus) {
-        setTimeout(() => {
-          formStatus.style.display = 'none';
-        }, 5000);
-      }
-    }, 1000);
-  });
-}
-
-/* ----------------------------------------------------
-   13. BACK TO TOP BUTTON
----------------------------------------------------- */
-function initBackToTop() {
-  const backToTopBtn = document.getElementById('backToTopBtn');
-  if (!backToTopBtn) return;
-
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 400) {
-      backToTopBtn.classList.add('visible');
-    } else {
-      backToTopBtn.classList.remove('visible');
-    }
-  }, { passive: true });
-
-  backToTopBtn.addEventListener('click', () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
   });
 }
